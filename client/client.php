@@ -143,6 +143,6 @@ class Client
 }
 
 // SETUP URL SERVER (PENTING: Pastikan ini sesuai dengan IP Server jika beda laptop)
-$url_server = 'http://10.10.20.148/sister-uas/server.php';
+$url_server = 'http://10.1z0.20.148/sister-uas/server.php';
 $abc = new Client($url_server);
 ?>
