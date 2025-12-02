@@ -26,8 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Ambil parameter aksi
     $aksi = $data->aksi;
 
-    if ($aksi == 'tambah_pemeriksaan') {
-        // Mapping data JSON ke Array PHP
+    // FUNGSI BARU: Aksi Login
+    // FUNGSI BARU: Aksi Login (SETELAH PERBAIKAN SEMENTARA)
+    if ($aksi == 'login') {
+        $username = $data->username; // <--- HAPUS PEMANGGILAN $db->filter()
+        $password = $data->password; // <--- HAPUS PEMANGGILAN $db->filter()
+
+        $user_data = $db->cek_login($username, $password);
+        // ...
+
+        if ($user_data) {
+            echo json_encode(["status" => "sukses", "data" => $user_data]);
+        } else {
+            echo json_encode(["status" => "gagal", "pesan" => "Username atau Password salah."]);
+        }
+    }
+    // FUNGSI LAMA: Tambah Pemeriksaan
+    elseif ($aksi == 'tambah_pemeriksaan') {
         $data_insert = array(
             'tgl_periksa' => $data->tgl_periksa,
             'berat_badan' => $data->berat_badan,
@@ -38,7 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         );
         $db->tambah_pemeriksaan($data_insert);
         echo json_encode(["status" => "sukses", "pesan" => "Data pemeriksaan berhasil disinkronkan"]);
-    } elseif ($aksi == 'hapus') {
+    }
+    // FUNGSI LAMA: Hapus
+    elseif ($aksi == 'hapus') {
         $db->hapus_pemeriksaan($data->id_periksa);
         echo json_encode(["status" => "sukses", "pesan" => "Data dihapus"]);
     }
@@ -49,12 +66,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // --- PROSES GET (Mengirim Data ke Client / Tampil di Web) ---
 elseif ($_SERVER['REQUEST_METHOD'] == 'GET') {
 
-    // Jika Client minta data master (balita/petugas)
-    if (isset($_GET['tabel'])) {
+    // FUNGSI MODIFIKASI: Jika Client minta data master (balita/petugas) DENGAN ID POSYANDU
+    if (isset($_GET['tabel']) && isset($_GET['id_posyandu'])) {
+        $tabel = $_GET['tabel'];
+        $id_posyandu = $db->filter($_GET['id_posyandu']);
+
+        // Panggil fungsi yang membatasi data berdasarkan ID Posyandu
+        $data = $db->tampil_semua_master_by_posyandu($tabel, $id_posyandu);
+        echo json_encode($data);
+    }
+
+    // FUNGSI ASAL: Jika Client minta data master (tanpa ID Posyandu, menggunakan fungsi lama)
+    elseif (isset($_GET['tabel'])) {
         $tabel = $_GET['tabel'];
         $data = $db->tampil_semua_master($tabel);
         echo json_encode($data);
     }
+
     // Default: Tampilkan data pemeriksaan (Dashboard Server)
     else {
         $data = $db->tampil_semua_pemeriksaan();

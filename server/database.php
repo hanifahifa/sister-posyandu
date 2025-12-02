@@ -2,9 +2,9 @@
 class Database
 {
     private $host = "localhost";
-    private $dbname = "db_server_posyandu"; // Sesuaikan nama DB
+    private $dbname = "db_server_posyandu"; // Sesuaikan nama DB Anda
     private $user = "root";
-    private $password = ""; // Sesuaikan password (kosongkan jika default XAMPP)
+    private $password = ""; // Sesuaikan password Anda
     private $port = "3306";
     private $conn;
 
@@ -23,11 +23,40 @@ class Database
         return $data;
     }
 
-    // -- FUNGSI UNTUK DATA MASTER (Posyandu, Balita, Petugas) --
-    // Digunakan agar Client bisa menarik data master (Sinkronisasi Turun)
+    // FUNGSI PERBAIKAN: Cek Login User (Ambiguity Fix)
+    public function cek_login($username, $password)
+    {
+        // FIX: Menggunakan 'p.id_posyandu' untuk menghilangkan ambiguitas
+        $query = $this->conn->prepare("SELECT p.id_posyandu, p.nama_posyandu 
+                                        FROM usser u  
+                                        JOIN posyandu_unit p ON u.id_posyandu = p.id_posyandu 
+                                        WHERE u.username = ? AND u.password = ?");
+        $query->execute(array($username, $password));
+        $data = $query->fetch(PDO::FETCH_ASSOC);
+
+        return $data;
+        $query->closeCursor();
+    }
+
+    // FUNGSI BARU: Tampil Data Master Berdasarkan Posyandu (Aman, dipakai Client yang sudah login)
+    public function tampil_semua_master_by_posyandu($tabel, $id_posyandu)
+    {
+        $allowed_tables = ['petugas', 'balita'];
+        if (!in_array($tabel, $allowed_tables)) {
+            return [];
+        }
+
+        $query = $this->conn->prepare("SELECT * FROM $tabel WHERE id_posyandu = ?");
+        $query->execute([$id_posyandu]);
+        $data = $query->fetchAll(PDO::FETCH_ASSOC);
+        return $data;
+        $query->closeCursor();
+        unset($data);
+    }
+
+    // FUNGSI ASAL: Tampil Semua Master (Tidak Aman, dipakai oleh Client lama jika tidak mengirim id_posyandu)
     public function tampil_semua_master($tabel)
     {
-        // Validasi nama tabel agar aman
         $allowed_tables = ['posyandu_unit', 'petugas', 'balita'];
         if (!in_array($tabel, $allowed_tables)) {
             return [];
@@ -45,7 +74,6 @@ class Database
 
     public function tampil_semua_pemeriksaan()
     {
-        // Menggunakan JOIN agar data yang tampil lengkap (Nama Balita, Nama Petugas)
         $sql = "SELECT p.*, b.nama_balita, pt.nama_petugas 
                 FROM pemeriksaan p
                 JOIN balita b ON p.id_balita = b.id_balita
@@ -60,7 +88,6 @@ class Database
         unset($data);
     }
 
-    // Fungsi Utama Sinkronisasi: Menerima data dari Client
     public function tambah_pemeriksaan($data)
     {
         $query = $this->conn->prepare("INSERT INTO pemeriksaan (tgl_periksa, berat_badan, tinggi_badan, catatan_gizi, id_balita, id_petugas) VALUES (?,?,?,?,?,?)");
