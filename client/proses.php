@@ -9,6 +9,7 @@ if (!$abc->is_connected()) {
 
 $aksi = isset($_POST['aksi']) ? $_POST['aksi'] : (isset($_GET['aksi']) ? $_GET['aksi'] : '');
 
+// === AKSI TAMBAH DATA BARU ===
 if ($aksi == 'tambah') {
     if (isset($_POST['tgl_periksa']) && isset($_POST['id_balita'])) {
         $data = array(
@@ -26,6 +27,36 @@ if ($aksi == 'tambah') {
     }
 } 
 
+// === AKSI EDIT DATA (BARU) ===
+elseif ($aksi == 'edit') {
+    if (isset($_POST['id_periksa']) && isset($_POST['tgl_periksa']) && isset($_POST['id_balita'])) {
+        $data = array(
+            "id_periksa" => $_POST['id_periksa'],
+            "tgl_periksa" => $_POST['tgl_periksa'],
+            "berat_badan" => $_POST['berat_badan'],
+            "tinggi_badan" => $_POST['tinggi_badan'],
+            "catatan_gizi" => $_POST['catatan_gizi'],
+            "id_balita" => $_POST['id_balita'],
+            "id_petugas" => $_POST['id_petugas']
+        );
+        $abc->update_pemeriksaan_lokal($data);
+        header('location:index.php?page=sync&status=updated');
+    } else {
+        header('location:index.php?page=sync&status=error_data');
+    }
+}
+
+// === AKSI DELETE DATA (BARU) ===
+elseif ($aksi == 'delete') {
+    if (isset($_GET['id'])) {
+        $abc->delete_pemeriksaan_lokal($_GET['id']);
+        header('location:index.php?page=sync&status=deleted');
+    } else {
+        header('location:index.php?page=sync&status=error_data');
+    }
+}
+
+// === AKSI DOWNLOAD MASTER DATA ===
 elseif ($aksi == 'download_master') {
     $success_balita = $abc->sync_download_master('balita');
     $success_petugas = $abc->sync_download_master('petugas');
@@ -37,12 +68,13 @@ elseif ($aksi == 'download_master') {
     }
 } 
 
+// === AKSI UPLOAD LAPORAN KE SERVER ===
 elseif ($aksi == 'upload_laporan') {
     $abc->sync_upload_laporan();
     header('location:index.php?page=sync&status=uploaded');
 }
 
-// --- Aksi Login ---
+// === AKSI LOGIN ===
 elseif ($aksi == 'login') {
     if (isset($_POST['username']) && isset($_POST['password'])) {
         $username = $_POST['username'];
@@ -66,7 +98,7 @@ elseif ($aksi == 'login') {
     }
 }
 
-// --- Aksi Logout ---
+// === AKSI LOGOUT ===
 elseif ($aksi == 'logout') {
     $abc->logout_lokal(); 
     header('location:index.php?page=login&status=loggedout');

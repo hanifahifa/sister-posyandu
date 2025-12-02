@@ -138,6 +138,39 @@ class Client
         $q = $this->conn->query($sql); return $q->fetchAll(PDO::FETCH_OBJ);
     }
 
+    // FUNGSI BARU: Mendapatkan data pemeriksaan berdasarkan ID
+    public function get_pemeriksaan_by_id($id_periksa) {
+        if (!$this->is_connected()) return null;
+        $sql = "SELECT * FROM pemeriksaan WHERE id_periksa = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$id_periksa]);
+        return $stmt->fetch(PDO::FETCH_OBJ);
+    }
+
+    // FUNGSI BARU: Update pemeriksaan lokal
+    public function update_pemeriksaan_lokal($data) {
+        if (!$this->is_connected()) return false;
+        $sql = "UPDATE pemeriksaan SET tgl_periksa = ?, berat_badan = ?, tinggi_badan = ?, catatan_gizi = ?, id_balita = ?, id_petugas = ? WHERE id_periksa = ?";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            $data['tgl_periksa'], 
+            $data['berat_badan'], 
+            $data['tinggi_badan'], 
+            $data['catatan_gizi'], 
+            $data['id_balita'], 
+            $data['id_petugas'],
+            $data['id_periksa']
+        ]);
+    }
+
+    // FUNGSI BARU: Delete pemeriksaan lokal
+    public function delete_pemeriksaan_lokal($id_periksa) {
+        if (!$this->is_connected()) return false;
+        $sql = "DELETE FROM pemeriksaan WHERE id_periksa = ?";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([$id_periksa]);
+    }
+
     // --- FUNGSI UPLOAD DATA ---
     public function sync_upload_laporan() {
         if (!$this->is_connected()) return false;

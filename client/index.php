@@ -47,6 +47,8 @@ if (!$id_posyandu_sesi && (!isset($_GET['page']) || $_GET['page'] != 'login')) {
         .btn-warning { background: linear-gradient(135deg, #ffd54f, #ffb74d); color: #f57c00; }
         .btn-primary { background: linear-gradient(135deg, #f48fb1, #ec407a); color: white; }
         .btn-success { background: linear-gradient(135deg, #81c784, #66bb6a); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ef5350, #e53935); color: white; }
+        .btn-secondary { background: linear-gradient(135deg, #bdbdbd, #9e9e9e); color: white; }
         .form-control, .form-select { border: 2px solid #f8bbd0; border-radius: 12px; padding: 0.8rem 1rem; transition: all 0.3s ease; background: rgba(252, 228, 236, 0.3); }
         .form-control:focus, .form-select:focus { border-color: #e91e63; box-shadow: 0 0 0 4px rgba(233, 30, 99, 0.1); background: white; }
         .form-label { color: #ad1457; font-weight: 600; margin-bottom: 0.6rem; }
@@ -95,6 +97,8 @@ if (!$id_posyandu_sesi && (!isset($_GET['page']) || $_GET['page'] != 'login')) {
         if ($status == 'saved') echo '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Data berhasil disimpan di lokal.</div>';
         if ($status == 'downloaded') echo '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Data master Balita/Petugas berhasil diperbarui dari Server.</div>';
         if ($status == 'uploaded') echo '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Laporan berhasil dikirim dan database lokal sudah dibersihkan</div>';
+        if ($status == 'updated') echo '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Data berhasil diperbarui.</div>';
+        if ($status == 'deleted') echo '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Data berhasil dihapus.</div>';
         if ($status == 'failed_download') echo '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal mengunduh data! Pastikan Server aktif dan Anda sudah login.</div>';
         if ($status == 'loggedout') echo '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Anda telah berhasil logout.</div>';
         if ($status == 'error_data') echo '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Data input tidak lengkap.</div>';
@@ -138,13 +142,13 @@ if (!$id_posyandu_sesi && (!isset($_GET['page']) || $_GET['page'] != 'login')) {
                         <i class="fas fa-baby"></i>
                     </div>
                     <h1>Selamat Datang, Kader Posyandu <?= $nama_posyandu_sesi ?>! 💕</h1>
-                    <p>Aplikasi ini menjalankan sistem Store-and-Forward untuk mempermudah pencatatan saat Posyandu berlangsung (bisa *OFFLINE*).</p>
+                    <p>Aplikasi ini menjalankan sistem Store-and-Forward untuk mempermudah pencatatan saat Posyandu berlangsung (bisa OFFLINE).</p>
                     <p>ID Unit Anda: <b><?= $id_posyandu_sesi ?></b></p>
                 </div>
 
             <?php } elseif ($page == 'master') { ?>
                 <h3 class="section-title"><i class="fas fa-database"></i> 1. Data Master</h3>
-                <p>Data yang diunduh ini hanya yang terkait dengan Posyandu *<?= $nama_posyandu_sesi ?>*.</p>
+                <p>Data yang diunduh ini hanya yang terkait dengan Posyandu <?= $nama_posyandu_sesi ?>.</p>
                 <a href="proses.php?aksi=download_master" class="btn btn-warning mb-4">
                     <i class="fas fa-cloud-download-alt"></i> Update Data Balita/Petugas dari Server
                 </a>
@@ -247,11 +251,82 @@ if (!$id_posyandu_sesi && (!isset($_GET['page']) || $_GET['page'] != 'login')) {
 
             <?php } elseif ($page == 'sync') { 
                 $data = $abc->tampil_pemeriksaan_lokal();
+                
+                // Cek apakah ada request edit
+                $edit_data = null;
+                if (isset($_GET['edit'])) {
+                    $edit_data = $abc->get_pemeriksaan_by_id($_GET['edit']);
+                }
                 ?>
                 <h3 class="section-title"><i class="fas fa-sync-alt"></i> 3. Sinkronisasi Data</h3>
                 <div class="info-box">
                     <i class="fas fa-info-circle"></i> Data di bawah ini adalah data <strong>Pending</strong> yang tersimpan di lokal (Offline).
                 </div>
+                
+                <?php if ($edit_data) { ?>
+                    <!-- Form Edit -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5><i class="fas fa-edit"></i> Edit Data Pemeriksaan</h5>
+                            <form action="proses.php" method="POST">
+                                <input type="hidden" name="aksi" value="edit">
+                                <input type="hidden" name="id_periksa" value="<?= $edit_data->id_periksa ?>">
+                                
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-baby"></i> Pilih Balita</label>
+                                    <select name="id_balita" class="form-select" required>
+                                        <option value="">-- Pilih Balita --</option>
+                                        <?php foreach($abc->get_all_balita() as $b) {
+                                            $selected = ($b->id_balita == $edit_data->id_balita) ? 'selected' : '';
+                                            echo "<option value='$b->id_balita' $selected>$b->nama_balita</option>";
+                                        } ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-calendar-alt"></i> Tanggal Periksa</label>
+                                    <input type="date" name="tgl_periksa" class="form-control" required value="<?= $edit_data->tgl_periksa ?>">
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label"><i class="fas fa-weight"></i> Berat Badan (kg)</label>
+                                        <input type="number" step="0.1" name="berat_badan" class="form-control" required value="<?= $edit_data->berat_badan ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><i class="fas fa-ruler-vertical"></i> Tinggi Badan (cm)</label>
+                                        <input type="number" step="0.1" name="tinggi_badan" class="form-control" required value="<?= $edit_data->tinggi_badan ?>">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-notes-medical"></i> Catatan Gizi</label>
+                                    <textarea name="catatan_gizi" class="form-control" rows="3"><?= $edit_data->catatan_gizi ?></textarea>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label"><i class="fas fa-user-doctor"></i> Petugas Pemeriksa</label>
+                                    <select name="id_petugas" class="form-select" required>
+                                        <option value="">-- Pilih Petugas --</option>
+                                        <?php foreach($abc->get_all_petugas() as $p) {
+                                            $selected = ($p->id_petugas == $edit_data->id_petugas) ? 'selected' : '';
+                                            echo "<option value='$p->id_petugas' $selected>$p->nama_petugas</option>";
+                                        } ?>
+                                    </select>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-save"></i> Simpan Perubahan
+                                    </button>
+                                    <a href="?page=sync" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Batal
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <?php } ?>
                 
                 <a href="proses.php?aksi=upload_laporan" class="btn btn-primary btn-lg mb-4" onclick="return confirm('Apakah Anda yakin mengirim semua data lokal ini ke Server Pusat?')">
                      <i class="fas fa-cloud-upload-alt"></i> Upload Laporan ke Server
@@ -266,6 +341,7 @@ if (!$id_posyandu_sesi && (!isset($_GET['page']) || $_GET['page'] != 'login')) {
                                 <th><i class="fas fa-weight"></i> BB / TB</th>
                                 <th><i class="fas fa-user-nurse"></i> Petugas</th>
                                 <th><i class="fas fa-info-circle"></i> Status</th>
+                                <th><i class="fas fa-cog"></i> Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -276,9 +352,19 @@ if (!$id_posyandu_sesi && (!isset($_GET['page']) || $_GET['page'] != 'login')) {
                                 <td><?= $d->berat_badan ?> kg / <?= $d->tinggi_badan ?> cm</td>
                                 <td><?= $d->nama_petugas ?></td>
                                 <td><span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> PENDING</span></td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="?page=sync&edit=<?= $d->id_periksa ?>" class="btn btn-sm btn-warning" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="proses.php?aksi=delete&id=<?= $d->id_periksa ?>" class="btn btn-sm btn-danger" title="Hapus" onclick="return confirm('Yakin ingin menghapus data pemeriksaan <?= $d->nama_balita ?> tanggal <?= $d->tgl_periksa ?>?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
                             </tr>
                             <?php } ?>
-                            <?php if(count($data) == 0) echo "<tr><td colspan='5' class='text-center'><i class='fas fa-check-circle'></i> Semua data sudah tersinkronisasi (Database Lokal Clean)</td></tr>"; ?>
+                            <?php if(count($data) == 0) echo "<tr><td colspan='6' class='text-center'><i class='fas fa-check-circle'></i> Semua data sudah tersinkronisasi (Database Lokal Clean)</td></tr>"; ?>
                         </tbody>
                     </table>
                 </div>
@@ -288,7 +374,7 @@ if (!$id_posyandu_sesi && (!isset($_GET['page']) || $_GET['page'] != 'login')) {
                 ?>
                 <h3 class="section-title"><i class="fas fa-server"></i> 4. Cek Data Pusat</h3>
                 <div class="alert alert-success">
-                    <i class="fas fa-cloud"></i> Data ini diambil *LANGSUNG* dari Server Pusat via API (Semua data dari semua Posyandu).
+                    <i class="fas fa-cloud"></i> Data ini diambil LANGSUNG dari Server Pusat via API (Semua data dari semua Posyandu).
                 </div>
 
                 <div class="table-responsive">
